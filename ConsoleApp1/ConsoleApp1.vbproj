@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <RootNamespace>ConsoleApp1</RootNamespace>
+        <TargetFramework>net9.0</TargetFramework>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\GeneratedFiles</CompilerGeneratedFilesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Analyzer Include="..\DeveloperCore.NotifyChangedGenerator\bin\Debug\netstandard2.0\DeveloperCore.NotifyChangedGenerator.dll" />
+        <ProjectReference Include="..\DeveloperCore.NotifyChanged\DeveloperCore.NotifyChanged.vbproj" />
+    </ItemGroup>
+
+</Project>
