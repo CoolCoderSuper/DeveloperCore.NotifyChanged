@@ -8,11 +8,15 @@ Here are some examples.
 Public Class Customer
     Inherits BindableObject
 
+    Private _customer As BackingCustomer
+    
     <NotifyChanged>
+    <EmitBind(NameOf(_customer), NameOf(BackingCustomer.Name))>
     <EmitCall(NameOf(Test1))>
     <EmitCall(NameOf(Test2))>
     Private _name As String
     <NotifyChanged>
+    <EmitBind(NameOf(_customer), NameOf(BackingCustomer.Age))>
     <EmitCondition(NameOf(Cond1))>
     <EmitCondition(NameOf(Cond2))>
     Private _age As Integer
@@ -48,6 +52,11 @@ Public Class Customer
         Return True
     End Function 
 End Class
+
+Public Class BackingCustomer
+    Public Property Name As String
+    Public Property Age As Integer
+End Class
 ```
 
 Generates this: 
@@ -59,6 +68,7 @@ Public Property Age As Int32
     Set
         If BeforeSetAge(Value, _age) AndAlso Cond1 AndAlso Cond2
             RaiseAndSetIfChanged(_age, Value)
+            _customer.Age = Value
             SetAge(Value)
         End If
     End Set
@@ -71,6 +81,7 @@ Public Property Name As String
     Set
         If BeforeSetName(Value, _name)
             RaiseAndSetIfChanged(_name, Value)
+            _customer.Name = Value
             Test1
             Test2
         End If
@@ -94,7 +105,7 @@ Public MustInherit Class BindableObject
 
     Public Sub RaiseAndSetIfChanged(Of T)(ByRef field As T, value As T, <CallerMemberName> Optional propertyName As String = "")
         If Not EqualityComparer(Of T).Default.Equals(field, value) Then
-            RaiseNotifyPropertyChanging("")
+            RaiseNotifyPropertyChanging(propertyName)
             field = value
             RaiseNotifyPropertyChanged(propertyName)
         End If

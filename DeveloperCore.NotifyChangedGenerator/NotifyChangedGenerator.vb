@@ -26,6 +26,8 @@ Public Class NotifyChangedGenerator
         Dim methodsToCall = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitCallAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim hasAnyPreCond = conditionalMethods.Any() OrElse hasSetterPreCondMeth
+        Dim bindingAttr = context.TargetSymbol.GetAttributes().FirstOrDefault(Function(x) x.AttributeClass.Name = "EmitBindAttribute")
+        Dim hasBinding = bindingAttr IsNot Nothing
         Dim propertyGetter =
                 SyntaxFactory.GetAccessorBlock(SyntaxFactory.GetAccessorStatement()).
                     AddStatements(SyntaxFactory.ReturnStatement(SyntaxFactory.ParseName(context.TargetSymbol.Name)))
@@ -37,6 +39,16 @@ Public Class NotifyChangedGenerator
                 })
         )
         Dim methodsToCallInvocations As New List(Of StatementSyntax)
+        If hasBinding Then
+            Dim bindingSource As String = bindingAttr.ConstructorArguments(0).Value
+            Dim bindingProperty As String = bindingAttr.ConstructorArguments(1).Value
+            methodsToCallInvocations.Add(
+                    SyntaxFactory.SimpleAssignmentStatement(
+                        SyntaxFactory.SimpleMemberAccessExpression(SyntaxFactory.IdentifierName(bindingSource), SyntaxFactory.IdentifierName(bindingProperty)),
+                        SyntaxFactory.IdentifierName("Value")
+                    )
+            )
+        End If
         If hasSetterMeth Then
             methodsToCallInvocations.Add(
                     SyntaxFactory.ExpressionStatement(
