@@ -104,7 +104,7 @@ Public Class NotifyChangedGenerator
                 SyntaxFactory.PropertyBlock(
                     SyntaxFactory.PropertyStatement(actualName).
                         WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword))).
-                        WithAsClause(SyntaxFactory.SimpleAsClause(SyntaxFactory.ParseTypeName(fieldSymbol.Type.Name))),
+                        WithAsClause(SyntaxFactory.SimpleAsClause(SyntaxFactory.ParseTypeName(fieldSymbol.Type.ToString()))),
                     SyntaxFactory.List(Of AccessorBlockSyntax)({propertyGetter, propertySetter})
                 )
         Dim typeName = context.TargetSymbol.ContainingType.Name

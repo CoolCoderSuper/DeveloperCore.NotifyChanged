@@ -1,4 +1,5 @@
 Imports System.ComponentModel
+Imports System.Data
 Imports System.Runtime.CompilerServices
 Imports DeveloperCore.NotifyChanged
 
@@ -26,6 +27,9 @@ Public Class Customer
     <NotifyChanged>
     Private m_strAddress As String
     
+    <NotifyChanged>
+    Private _items As DataTable
+
     Private Function BeforeSetName(value As String, oldValue As String) As Boolean
         Return _name.Length > 0
     End Function
