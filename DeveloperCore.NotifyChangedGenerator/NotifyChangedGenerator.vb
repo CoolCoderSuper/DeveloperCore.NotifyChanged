@@ -112,10 +112,20 @@ Public Class NotifyChangedGenerator
                 AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.PartialKeyword))
         Dim classBlock = SyntaxFactory.ClassBlock(classStatement).AddMembers(propertyBlock)
         Dim result As SyntaxNode = classBlock
-        If context.SemanticModel.Compilation.RootNamespace().MetadataName <> context.TargetSymbol.ContainingNamespace.MetadataName Then
-            result = SyntaxFactory.NamespaceBlock(SyntaxFactory.NamespaceStatement(SyntaxFactory.ParseName(context.TargetSymbol.ContainingNamespace.MetadataName))).AddMembers(classBlock)
+        Dim root As INamespaceSymbol = context.SemanticModel.Compilation.RootNamespace()
+        If root.Name <> context.TargetSymbol.ContainingNamespace.Name Then
+            result = SyntaxFactory.NamespaceBlock(SyntaxFactory.NamespaceStatement(SyntaxFactory.ParseName(GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)))).AddMembers(classBlock)
         End If
         Return New PropertyGenInfo(result.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
+    End Function
+
+    Private Shared Function GetFullNamespace(symbol As INamespaceSymbol, root As INamespaceSymbol) As String
+        If symbol Is Nothing OrElse symbol.Name = root.Name Then Return ""
+        Dim nextName As String = GetFullNamespace(symbol.ContainingNamespace, root)
+        If String.IsNullOrEmpty(nextName) Then
+            Return symbol.Name
+        End If
+        Return $"{nextName}.{symbol.Name}"
     End Function
     
     Private Shared Function GetPropertyName(name As String) As String
