@@ -116,7 +116,10 @@ Public Class NotifyChangedGenerator
         If root.Name <> context.TargetSymbol.ContainingNamespace.Name Then
             result = SyntaxFactory.NamespaceBlock(SyntaxFactory.NamespaceStatement(SyntaxFactory.ParseName(GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)))).AddMembers(classBlock)
         End If
-        Return New PropertyGenInfo(result.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
+        Dim unit = SyntaxFactory.CompilationUnit().
+                AddImports(context.TargetNode.SyntaxTree.GetRoot().DescendantNodes().OfType(Of ImportsStatementSyntax).ToArray()).
+                AddMembers(result)
+        Return New PropertyGenInfo(unit.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
     End Function
 
     Private Shared Function GetFullNamespace(symbol As INamespaceSymbol, root As INamespaceSymbol) As String
