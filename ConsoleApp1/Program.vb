@@ -16,12 +16,12 @@ Namespace Other.Nice
         Private _customer As BackingCustomer
 
         <NotifyChanged>
-        <EmitBind(NameOf(_customer), NameOf(BackingCustomer.Name))>
+        <EmitBind(NameOf(_customer))>
         <EmitCall(NameOf(Test1))>
         <EmitCall(NameOf(Test2))> Private _name As String
 
         <NotifyChanged>
-        <EmitBind(NameOf(_customer), NameOf(BackingCustomer.Age))>
+        <EmitBind(NameOf(_customer))>
         <EmitCondition(NameOf(Cond1))>
         <EmitCondition(NameOf(Cond2))> Private _age As Integer
 

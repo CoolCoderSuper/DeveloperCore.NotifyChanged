@@ -2,7 +2,7 @@
 Public Class EmitBindAttribute
     Inherits Attribute
 
-    Public Sub New(source As String, [property] As String)
+    Public Sub New(source As String, Optional [property] As String = Nothing)
         Me.Source = source
         Me.[Property] = [property]
     End Sub

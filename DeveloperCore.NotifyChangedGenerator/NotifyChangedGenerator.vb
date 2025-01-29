@@ -41,7 +41,7 @@ Public Class NotifyChangedGenerator
         Dim methodsToCallInvocations As New List(Of StatementSyntax)
         If hasBinding Then
             Dim bindingSource As String = bindingAttr.ConstructorArguments(0).Value
-            Dim bindingProperty As String = bindingAttr.ConstructorArguments(1).Value
+            Dim bindingProperty As String = If(bindingAttr.ConstructorArguments.Length > 1, If(bindingAttr.ConstructorArguments(1).Value, actualName), actualName)
             methodsToCallInvocations.Add(
                     SyntaxFactory.SimpleAssignmentStatement(
                         SyntaxFactory.SimpleMemberAccessExpression(SyntaxFactory.IdentifierName(bindingSource), SyntaxFactory.IdentifierName(bindingProperty)),
