@@ -136,9 +136,13 @@ Public Class NotifyChangedGenerator
             name = name.Substring(1)
         ElseIf name.StartsWith("m_") Then
             name = name.Substring(2)
-            Return name.Remove(0, name.IndexOf(name.First(Function(x) Char.IsUpper(x))))
+            name = name.Remove(0, name.IndexOf(name.First(Function(x) Char.IsUpper(x))))
         End If
-        Return $"{Char.ToUpper(name(0))}{name.Remove(0, 1)}"
+        name = $"{Char.ToUpper(name(0))}{name.Remove(0, 1)}"
+        If SyntaxFactory.ParseToken(name).IsReservedKeyword() Then
+            name = $"[{name}]"
+        End If
+        Return name
     End Function
 End Class
 

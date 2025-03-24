@@ -30,6 +30,8 @@ Namespace Other.Nice
         <NotifyChanged> Private _items As DataTable
 
         <NotifyChanged> Private _children As List(Of List(Of BackingCustomer))
+        
+        <NotifyChanged> Private _readOnly As Boolean
 
         Private Function BeforeSetName(value As String, oldValue As String) As Boolean
             Return _name.Length > 0
