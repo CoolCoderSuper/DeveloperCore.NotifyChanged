@@ -58,6 +58,11 @@ Namespace Other.Nice
         Private Function Cond2() As Boolean
             Return True
         End Function
+        
+        <GlobalCall>
+        Private Sub OnChanged()
+            
+        End Sub
     End Class
 End Namespace
 

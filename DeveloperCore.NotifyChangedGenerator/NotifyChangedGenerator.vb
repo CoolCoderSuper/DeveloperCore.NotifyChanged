@@ -24,6 +24,7 @@ Public Class NotifyChangedGenerator
         Dim hasSetterMeth = context.TargetSymbol.ContainingType.GetMembers().Any(Function(x) x.Name = $"Set{actualName}")
         Dim hasSetterPreCondMeth = context.TargetSymbol.ContainingType.GetMembers().Any(Function(x) x.Name = $"BeforeSet{actualName}")
         Dim methodsToCall = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitCallAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
+        methodsToCall = methodsToCall.Concat(context.TargetSymbol.ContainingType.GetMembers().Where(Function(x) x.GetAttributes().Any(Function(y) y.AttributeClass.Name = "GlobalCallAttribute")).Select(Function(x) x.Name)).ToArray()
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim hasAnyPreCond = conditionalMethods.Any() OrElse hasSetterPreCondMeth
         Dim bindingAttr = context.TargetSymbol.GetAttributes().FirstOrDefault(Function(x) x.AttributeClass.Name = "EmitBindAttribute")
