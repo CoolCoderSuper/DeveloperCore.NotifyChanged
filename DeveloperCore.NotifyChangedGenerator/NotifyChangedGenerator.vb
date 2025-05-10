@@ -1,6 +1,7 @@
 ﻿Imports System.Threading
 Imports Microsoft.CodeAnalysis
 Imports Microsoft.CodeAnalysis.VisualBasic
+Imports S = Microsoft.CodeAnalysis.VisualBasic.SyntaxFactory
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 
 <Generator(LanguageNames.VisualBasic)>
@@ -30,13 +31,13 @@ Public Class NotifyChangedGenerator
         Dim bindingAttr = context.TargetSymbol.GetAttributes().FirstOrDefault(Function(x) x.AttributeClass.Name = "EmitBindAttribute")
         Dim hasBinding = bindingAttr IsNot Nothing
         Dim propertyGetter =
-                SyntaxFactory.GetAccessorBlock(SyntaxFactory.GetAccessorStatement()).
-                    AddStatements(SyntaxFactory.ReturnStatement(SyntaxFactory.ParseName(context.TargetSymbol.Name)))
-        Dim valueSetStatement As StatementSyntax = SyntaxFactory.ExpressionStatement(
-            SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName("RaiseAndSetIfChanged")).
+                S.GetAccessorBlock(S.GetAccessorStatement()).
+                    AddStatements(S.ReturnStatement(S.ParseName(context.TargetSymbol.Name)))
+        Dim valueSetStatement As StatementSyntax = S.ExpressionStatement(
+            S.InvocationExpression(S.ParseName("RaiseAndSetIfChanged")).
                 AddArgumentListArguments({
-                    SyntaxFactory.SimpleArgument(SyntaxFactory.IdentifierName(context.TargetSymbol.Name)),
-                    SyntaxFactory.SimpleArgument(SyntaxFactory.IdentifierName("Value"))
+                    S.SimpleArgument(S.IdentifierName(context.TargetSymbol.Name)),
+                    S.SimpleArgument(S.IdentifierName("Value"))
                 })
         )
         Dim methodsToCallInvocations As New List(Of StatementSyntax)
@@ -44,80 +45,80 @@ Public Class NotifyChangedGenerator
             Dim bindingSource As String = bindingAttr.ConstructorArguments(0).Value
             Dim bindingProperty As String = If(bindingAttr.ConstructorArguments.Length > 1, If(bindingAttr.ConstructorArguments(1).Value, actualName), actualName)
             methodsToCallInvocations.Add(
-                    SyntaxFactory.SimpleAssignmentStatement(
-                        SyntaxFactory.SimpleMemberAccessExpression(SyntaxFactory.IdentifierName(bindingSource), SyntaxFactory.IdentifierName(bindingProperty)),
-                        SyntaxFactory.IdentifierName("Value")
+                    S.SimpleAssignmentStatement(
+                        S.SimpleMemberAccessExpression(S.IdentifierName(bindingSource), S.IdentifierName(bindingProperty)),
+                        S.IdentifierName("Value")
                     )
             )
         End If
         If hasSetterMeth Then
             methodsToCallInvocations.Add(
-                    SyntaxFactory.ExpressionStatement(
-                        SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName($"Set{actualName}")).
-                            AddArgumentListArguments({SyntaxFactory.SimpleArgument(SyntaxFactory.IdentifierName("Value"))})
+                    S.ExpressionStatement(
+                        S.InvocationExpression(S.ParseName($"Set{actualName}")).
+                            AddArgumentListArguments({S.SimpleArgument(S.IdentifierName("Value"))})
                     )
             )
         End If
         For Each method In methodsToCall
             methodsToCallInvocations.Add(
-                    SyntaxFactory.ExpressionStatement(
-                        SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName(method))
+                    S.ExpressionStatement(
+                        S.InvocationExpression(S.ParseName(method))
                     )
             )
         Next
         If hasAnyPreCond Then
             Dim conditionalExpr As ExpressionSyntax
             If conditionalMethods.Length = 1 Then
-                conditionalExpr = SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName(conditionalMethods(0)))
+                conditionalExpr = S.InvocationExpression(S.ParseName(conditionalMethods(0)))
             ElseIf conditionalMethods.Length > 1 Then
-                conditionalExpr = SyntaxFactory.AndAlsoExpression(SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName(conditionalMethods(0))), SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName(conditionalMethods(1))))
+                conditionalExpr = S.AndAlsoExpression(S.InvocationExpression(S.ParseName(conditionalMethods(0))), S.InvocationExpression(S.ParseName(conditionalMethods(1))))
                 For i As Integer = 2 To conditionalMethods.Length - 1
-                    conditionalExpr = SyntaxFactory.AndAlsoExpression(conditionalExpr, SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName(conditionalMethods(i))))
+                    conditionalExpr = S.AndAlsoExpression(conditionalExpr, S.InvocationExpression(S.ParseName(conditionalMethods(i))))
                 Next
             End If
             If hasSetterPreCondMeth Then
                 Dim preCondMeth =
-                        SyntaxFactory.InvocationExpression(SyntaxFactory.ParseName($"BeforeSet{actualName}")).
+                        S.InvocationExpression(S.ParseName($"BeforeSet{actualName}")).
                             AddArgumentListArguments({
-                                SyntaxFactory.SimpleArgument(SyntaxFactory.IdentifierName("Value")),
-                                SyntaxFactory.SimpleArgument(SyntaxFactory.IdentifierName(context.TargetSymbol.Name))
+                                S.SimpleArgument(S.IdentifierName("Value")),
+                                S.SimpleArgument(S.IdentifierName(context.TargetSymbol.Name))
                             })
                 If conditionalExpr Is Nothing Then
                     conditionalExpr = preCondMeth
                 Else
-                    conditionalExpr = SyntaxFactory.AndAlsoExpression(preCondMeth, conditionalExpr)
+                    conditionalExpr = S.AndAlsoExpression(preCondMeth, conditionalExpr)
                 End If
             End If
             valueSetStatement = 
-                SyntaxFactory.MultiLineIfBlock(
-                    SyntaxFactory.IfStatement(
+                S.MultiLineIfBlock(
+                    S.IfStatement(
                         conditionalExpr
                     )
                 ).AddStatements(valueSetStatement).AddStatements(methodsToCallInvocations.ToArray())
         End If
         Dim propertySetter = 
-                SyntaxFactory.SetAccessorBlock(SyntaxFactory.SetAccessorStatement()).
+                S.SetAccessorBlock(S.SetAccessorStatement()).
                     AddStatements(valueSetStatement)
         If Not hasAnyPreCond Then
             propertySetter = propertySetter.AddStatements(methodsToCallInvocations.ToArray())
         End If
         Dim propertyBlock =
-                SyntaxFactory.PropertyBlock(
-                    SyntaxFactory.PropertyStatement(actualName).
-                        WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword))).
-                        WithAsClause(SyntaxFactory.SimpleAsClause(SyntaxFactory.ParseTypeName(fieldSymbol.Type.ToString()))),
-                    SyntaxFactory.List(Of AccessorBlockSyntax)({propertyGetter, propertySetter})
+                S.PropertyBlock(
+                    S.PropertyStatement(actualName).
+                        WithModifiers(S.TokenList(S.Token(SyntaxKind.PublicKeyword))).
+                        WithAsClause(S.SimpleAsClause(S.ParseTypeName(fieldSymbol.Type.ToString()))),
+                    S.List(Of AccessorBlockSyntax)({propertyGetter, propertySetter})
                 )
         Dim typeName = context.TargetSymbol.ContainingType.Name
-        Dim classStatement = SyntaxFactory.ClassStatement(typeName).
-                AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.PartialKeyword))
-        Dim classBlock = SyntaxFactory.ClassBlock(classStatement).AddMembers(propertyBlock)
+        Dim classStatement = S.ClassStatement(typeName).
+                AddModifiers(S.Token(SyntaxKind.PublicKeyword), S.Token(SyntaxKind.PartialKeyword))
+        Dim classBlock = S.ClassBlock(classStatement).AddMembers(propertyBlock)
         Dim result As SyntaxNode = classBlock
         Dim root As INamespaceSymbol = context.SemanticModel.Compilation.RootNamespace()
         If root.Name <> context.TargetSymbol.ContainingNamespace.Name Then
-            result = SyntaxFactory.NamespaceBlock(SyntaxFactory.NamespaceStatement(SyntaxFactory.ParseName(GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)))).AddMembers(classBlock)
+            result = S.NamespaceBlock(S.NamespaceStatement(S.ParseName(GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)))).AddMembers(classBlock)
         End If
-        Dim unit = SyntaxFactory.CompilationUnit().
+        Dim unit = S.CompilationUnit().
                 AddImports(context.TargetNode.SyntaxTree.GetRoot().DescendantNodes().OfType(Of ImportsStatementSyntax).ToArray()).
                 AddMembers(result)
         Return New PropertyGenInfo(unit.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
@@ -140,7 +141,7 @@ Public Class NotifyChangedGenerator
             name = name.Remove(0, name.IndexOf(name.First(Function(x) Char.IsUpper(x))))
         End If
         name = $"{Char.ToUpper(name(0))}{name.Remove(0, 1)}"
-        If SyntaxFactory.ParseToken(name).IsReservedKeyword() Then
+        If S.ParseToken(name).IsReservedKeyword() Then
             name = $"[{name}]"
         End If
         Return name
