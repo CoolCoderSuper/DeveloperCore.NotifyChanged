@@ -91,6 +91,11 @@ Public MustInherit Class BindableObject
     Public Sub RaiseNotifyPropertyChanged(propertyName As String)
         RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
     End Sub
+    
+    <GlobalCall>
+    Public Sub OnBaseChanged()
+        
+    End Sub
 
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     Public Event PropertyChanging As PropertyChangingEventHandler Implements INotifyPropertyChanging.PropertyChanging

@@ -25,7 +25,7 @@ Public Class NotifyChangedGenerator
         Dim hasSetterMeth = context.TargetSymbol.ContainingType.GetMembers().Any(Function(x) x.Name = $"Set{actualName}")
         Dim hasSetterPreCondMeth = context.TargetSymbol.ContainingType.GetMembers().Any(Function(x) x.Name = $"BeforeSet{actualName}")
         Dim methodsToCall = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitCallAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
-        methodsToCall = methodsToCall.Concat(context.TargetSymbol.ContainingType.GetMembers().Where(Function(x) x.GetAttributes().Any(Function(y) y.AttributeClass.Name = "GlobalCallAttribute")).Select(Function(x) x.Name)).ToArray()
+        methodsToCall = methodsToCall.Concat(GetGlobalCalls(context.TargetSymbol.ContainingType)).ToArray()
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim hasAnyPreCond = conditionalMethods.Any() OrElse hasSetterPreCondMeth
         Dim bindingAttr = context.TargetSymbol.GetAttributes().FirstOrDefault(Function(x) x.AttributeClass.Name = "EmitBindAttribute")
@@ -122,6 +122,15 @@ Public Class NotifyChangedGenerator
                 AddImports(context.TargetNode.SyntaxTree.GetRoot().DescendantNodes().OfType(Of ImportsStatementSyntax).ToArray()).
                 AddMembers(result)
         Return New PropertyGenInfo(unit.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
+    End Function
+    
+    Private Shared Function GetGlobalCalls(symbol As INamedTypeSymbol) As String()
+        Dim result As New List(Of String)
+        While symbol IsNot Nothing
+            result.AddRange(symbol.GetMembers().Where(Function(x) x.GetAttributes().Any(Function(y) y.AttributeClass.Name = "GlobalCallAttribute")).Select(Function(x) x.Name))
+            symbol = symbol.BaseType
+        End While
+        Return result.ToArray()
     End Function
 
     Private Shared Function GetFullNamespace(symbol As INamespaceSymbol, root As INamespaceSymbol) As String
