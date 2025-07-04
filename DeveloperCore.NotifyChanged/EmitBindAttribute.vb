@@ -1,4 +1,4 @@
-﻿<AttributeUsage(AttributeTargets.Field)>
+﻿<AttributeUsage(AttributeTargets.Field, AllowMultiple := True)>
 Public Class EmitBindAttribute
     Inherits Attribute
 

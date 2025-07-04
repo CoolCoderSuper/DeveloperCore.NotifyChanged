@@ -28,8 +28,8 @@ Public Class NotifyChangedGenerator
         methodsToCall = methodsToCall.Concat(GetGlobalCalls(context.TargetSymbol.ContainingType)).ToArray()
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim hasAnyPreCond = conditionalMethods.Any() OrElse hasSetterPreCondMeth
-        Dim bindingAttr = context.TargetSymbol.GetAttributes().FirstOrDefault(Function(x) x.AttributeClass.Name = "EmitBindAttribute")
-        Dim hasBinding = bindingAttr IsNot Nothing
+        Dim bindings = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitBindAttribute").ToArray()
+        Dim hasBinding = bindings.Any()
         Dim propertyGetter =
                 S.GetAccessorBlock(S.GetAccessorStatement()).
                     AddStatements(S.ReturnStatement(S.ParseName(context.TargetSymbol.Name)))
@@ -42,14 +42,16 @@ Public Class NotifyChangedGenerator
         )
         Dim methodsToCallInvocations As New List(Of StatementSyntax)
         If hasBinding Then
-            Dim bindingSource As String = bindingAttr.ConstructorArguments(0).Value
-            Dim bindingProperty As String = If(bindingAttr.ConstructorArguments.Length > 1, If(bindingAttr.ConstructorArguments(1).Value, actualName), actualName)
-            methodsToCallInvocations.Add(
+            For Each bindingAttr In bindings
+                Dim bindingSource As String = bindingAttr.ConstructorArguments(0).Value
+                Dim bindingProperty As String = If(bindingAttr.ConstructorArguments.Length > 1, If(bindingAttr.ConstructorArguments(1).Value, actualName), actualName)
+                methodsToCallInvocations.Add(
                     S.SimpleAssignmentStatement(
                         S.SimpleMemberAccessExpression(S.IdentifierName(bindingSource), S.IdentifierName(bindingProperty)),
                         S.IdentifierName("Value")
+                        )
                     )
-            )
+            Next
         End If
         If hasSetterMeth Then
             methodsToCallInvocations.Add(

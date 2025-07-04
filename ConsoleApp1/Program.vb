@@ -14,16 +14,20 @@ Namespace Other.Nice
         Inherits BindableObject
 
         Private _customer As BackingCustomer
+        Private _cust As BackingCustomer
 
         <NotifyChanged>
         <EmitBind(NameOf(_customer))>
+        <EmitBind(NameOf(_cust))>
         <EmitCall(NameOf(Test1))>
         <EmitCall(NameOf(Test2))> Private _name As String
 
         <NotifyChanged>
         <EmitBind(NameOf(_customer))>
+        <EmitBind(NameOf(_cust))>
         <EmitCondition(NameOf(Cond1))>
-        <EmitCondition(NameOf(Cond2))> Private _age As Integer
+        <EmitCondition(NameOf(Cond2))>
+        <EmitCondition(NameOf(Cond3))> Private _age As Integer
 
         <NotifyChanged> Private m_strAddress As String
 
@@ -58,6 +62,8 @@ Namespace Other.Nice
         Private Function Cond2() As Boolean
             Return True
         End Function
+        
+        Public ReadOnly Property Cond3 As Boolean = True
         
         <GlobalCall>
         Private Sub OnChanged()
