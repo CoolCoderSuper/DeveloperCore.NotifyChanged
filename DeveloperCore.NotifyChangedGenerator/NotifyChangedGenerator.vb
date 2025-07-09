@@ -9,12 +9,29 @@ Public Class NotifyChangedGenerator
     Implements IIncrementalGenerator
 
     Public Sub Initialize(initContext As IncrementalGeneratorInitializationContext) Implements IIncrementalGenerator.Initialize
-        Dim values = initContext.SyntaxProvider.ForAttributeWithMetadataName("DeveloperCore.NotifyChanged.NotifyChangedAttribute", Function(node, token) True, AddressOf ProcessNotifyChangedAttribute)
-        initContext.RegisterSourceOutput(values, AddressOf Generate)
+        Dim properties = initContext.SyntaxProvider.ForAttributeWithMetadataName("DeveloperCore.NotifyChanged.NotifyChangedAttribute", Function(node, token) True, AddressOf ProcessNotifyChangedAttribute)
+        Dim classes = properties.Collect().Select(Function(x, t) x.GroupBy(Function(y) y.Name).Select(Function(y) New ClassGenInfo(y.Key, y.ToArray())).ToArray())
+        initContext.RegisterSourceOutput(classes, AddressOf Generate)
     End Sub
 
-    Private Sub Generate(context As SourceProductionContext, info As PropertyGenInfo)
-        context.AddSource(info.Name & ".g.vb", info.Syntax.ToFullString())
+    Private Sub Generate(context As SourceProductionContext, classes As ClassGenInfo())
+        For Each info In classes
+            Dim firstProp = info.Properties.First()
+            Dim classStatement = S.ClassStatement(info.Name).
+                    AddModifiers(S.Token(SyntaxKind.PublicKeyword), S.Token(SyntaxKind.PartialKeyword))
+            Dim classBlock = S.ClassBlock(classStatement).AddMembers(info.Properties.Select(Function(x) x.Syntax).ToArray())
+            Dim result As SyntaxNode = classBlock
+            If Not String.IsNullOrEmpty(firstProp.NamespaceName) Then
+                result = S.NamespaceBlock(S.NamespaceStatement(S.ParseName(firstProp.NamespaceName))).AddMembers(classBlock)
+            End If
+            Dim directives = info.Properties.SelectMany(Function(x) x.Directives.SelectMany(Function(y) y.ImportsClauses)).
+                    GroupBy(Function(x) x.ToString()).Select(Function(x) x.First()).ToArray()
+            Dim unit = S.CompilationUnit().
+                    AddImports(S.ImportsStatement(S.SeparatedList(directives))).
+                    AddMembers(result).
+                    NormalizeWhitespace()
+            context.AddSource($"{info.Name}.g.vb", unit.ToFullString())
+        Next
     End Sub
 
     Private Function ProcessNotifyChangedAttribute(context As GeneratorAttributeSyntaxContext, token As CancellationToken) As PropertyGenInfo
@@ -111,19 +128,14 @@ Public Class NotifyChangedGenerator
                         WithAsClause(S.SimpleAsClause(S.ParseTypeName(fieldSymbol.Type.ToString()))),
                     S.List(Of AccessorBlockSyntax)({propertyGetter, propertySetter})
                 )
-        Dim typeName = context.TargetSymbol.ContainingType.Name
-        Dim classStatement = S.ClassStatement(typeName).
-                AddModifiers(S.Token(SyntaxKind.PublicKeyword), S.Token(SyntaxKind.PartialKeyword))
-        Dim classBlock = S.ClassBlock(classStatement).AddMembers(propertyBlock)
-        Dim result As SyntaxNode = classBlock
+        Dim typeName = fieldSymbol.ContainingType.Name
         Dim root As INamespaceSymbol = context.SemanticModel.Compilation.RootNamespace()
+        Dim namespaceName As String = Nothing
         If root.Name <> context.TargetSymbol.ContainingNamespace.Name Then
-            result = S.NamespaceBlock(S.NamespaceStatement(S.ParseName(GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)))).AddMembers(classBlock)
+            namespaceName = GetFullNamespace(context.TargetSymbol.ContainingNamespace, root)
         End If
-        Dim unit = S.CompilationUnit().
-                AddImports(context.TargetNode.SyntaxTree.GetRoot().DescendantNodes().OfType(Of ImportsStatementSyntax).ToArray()).
-                AddMembers(result)
-        Return New PropertyGenInfo(unit.NormalizeWhitespace(), $"{fieldSymbol.ContainingType.Name}_{actualName}")
+        Dim directives = context.TargetNode.SyntaxTree.GetRoot().DescendantNodes().OfType(Of ImportsStatementSyntax)().ToArray()
+        Return New PropertyGenInfo(typeName, propertyBlock.NormalizeWhitespace(), directives, namespaceName)
     End Function
     
     Private Shared Function GetGlobalCalls(symbol As INamedTypeSymbol) As String()
@@ -159,12 +171,26 @@ Public Class NotifyChangedGenerator
     End Function
 End Class
 
-Public Class PropertyGenInfo
-    Sub New(syntax As SyntaxNode, name As String)
-        Me.Syntax = syntax
+Public Class ClassGenInfo
+    Public Sub New(name As String, properties As PropertyGenInfo())
         Me.Name = name
+        Me.Properties = properties
     End Sub
 
     Public ReadOnly Property Name As String
-    Public ReadOnly Property Syntax As SyntaxNode
+    Public ReadOnly Property Properties As PropertyGenInfo()
+End Class
+
+Public Class PropertyGenInfo
+    Public Sub New(name As String, syntax As PropertyBlockSyntax, directives As ImportsStatementSyntax(), namespaceName As String)
+        Me.Name = name
+        Me.Syntax = syntax
+        Me.Directives = directives
+        Me.NamespaceName = namespaceName
+    End Sub
+
+    Public ReadOnly Property Name As String
+    Public ReadOnly Property Syntax As PropertyBlockSyntax
+    Public ReadOnly Property NamespaceName As String
+    Public ReadOnly Property Directives As ImportsStatementSyntax()
 End Class
