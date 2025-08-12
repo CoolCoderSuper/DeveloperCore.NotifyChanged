@@ -44,19 +44,17 @@ Public Class NotifyChangedGenerator
         Dim methodsToCall = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitCallAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         methodsToCall = methodsToCall.Concat(GetGlobalCalls(context.TargetSymbol.ContainingType)).ToArray()
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
-        Dim hasAnyPreCond = conditionalMethods.Any() OrElse hasSetterPreCondMeth
         Dim bindings = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitBindAttribute").ToArray()
         Dim hasBinding = bindings.Any()
         Dim propertyGetter =
                 S.GetAccessorBlock(S.GetAccessorStatement()).
                     AddStatements(S.ReturnStatement(S.ParseName(context.TargetSymbol.Name)))
-        Dim valueSetStatement As StatementSyntax = S.ExpressionStatement(
+        Dim setIfChangedExpression = 
             S.InvocationExpression(S.ParseName("RaiseAndSetIfChanged")).
                 AddArgumentListArguments({
                     S.SimpleArgument(S.IdentifierName(context.TargetSymbol.Name)),
                     S.SimpleArgument(S.IdentifierName("Value"))
                 })
-        )
         Dim methodsToCallInvocations As New List(Of StatementSyntax)
         If hasBinding Then
             For Each bindingAttr In bindings
@@ -85,42 +83,42 @@ Public Class NotifyChangedGenerator
                     )
             )
         Next
-        If hasAnyPreCond Then
-            Dim conditionalExpr As ExpressionSyntax
-            If conditionalMethods.Length = 1 Then
-                conditionalExpr = S.InvocationExpression(S.ParseName(conditionalMethods(0)))
-            ElseIf conditionalMethods.Length > 1 Then
-                conditionalExpr = S.AndAlsoExpression(S.InvocationExpression(S.ParseName(conditionalMethods(0))), S.InvocationExpression(S.ParseName(conditionalMethods(1))))
-                For i As Integer = 2 To conditionalMethods.Length - 1
-                    conditionalExpr = S.AndAlsoExpression(conditionalExpr, S.InvocationExpression(S.ParseName(conditionalMethods(i))))
-                Next
-            End If
-            If hasSetterPreCondMeth Then
-                Dim preCondMeth =
-                        S.InvocationExpression(S.ParseName($"BeforeSet{actualName}")).
-                            AddArgumentListArguments({
-                                S.SimpleArgument(S.IdentifierName("Value")),
-                                S.SimpleArgument(S.IdentifierName(context.TargetSymbol.Name))
-                            })
-                If conditionalExpr Is Nothing Then
-                    conditionalExpr = preCondMeth
-                Else
-                    conditionalExpr = S.AndAlsoExpression(preCondMeth, conditionalExpr)
-                End If
-            End If
-            valueSetStatement = 
-                S.MultiLineIfBlock(
-                    S.IfStatement(
-                        conditionalExpr
-                    )
-                ).AddStatements(valueSetStatement).AddStatements(methodsToCallInvocations.ToArray())
+        Dim conditionalExpr As ExpressionSyntax
+        If conditionalMethods.Length = 1 Then
+            conditionalExpr = S.InvocationExpression(S.ParseName(conditionalMethods(0)))
+        ElseIf conditionalMethods.Length > 1 Then
+            conditionalExpr = S.AndAlsoExpression(S.InvocationExpression(S.ParseName(conditionalMethods(0))), S.InvocationExpression(S.ParseName(conditionalMethods(1))))
+            For i As Integer = 2 To conditionalMethods.Length - 1
+                conditionalExpr = S.AndAlsoExpression(conditionalExpr, S.InvocationExpression(S.ParseName(conditionalMethods(i))))
+            Next
         End If
+        If hasSetterPreCondMeth Then
+            Dim preCondMeth =
+                    S.InvocationExpression(S.ParseName($"BeforeSet{actualName}")).
+                        AddArgumentListArguments({
+                            S.SimpleArgument(S.IdentifierName("Value")),
+                            S.SimpleArgument(S.IdentifierName(context.TargetSymbol.Name))
+                        })
+            If conditionalExpr Is Nothing Then
+                conditionalExpr = preCondMeth
+            Else
+                conditionalExpr = S.AndAlsoExpression(preCondMeth, conditionalExpr)
+            End If
+        End If
+        If conditionalExpr Is Nothing Then
+            conditionalExpr = setIfChangedExpression
+        Else
+            conditionalExpr = S.AndAlsoExpression(conditionalExpr, setIfChangedExpression)
+        End If
+        Dim valueSetStatement As StatementSyntax = 
+            S.MultiLineIfBlock(
+                S.IfStatement(
+                    conditionalExpr
+                )
+            ).AddStatements(methodsToCallInvocations.ToArray())
         Dim propertySetter = 
                 S.SetAccessorBlock(S.SetAccessorStatement()).
                     AddStatements(valueSetStatement)
-        If Not hasAnyPreCond Then
-            propertySetter = propertySetter.AddStatements(methodsToCallInvocations.ToArray())
-        End If
         Dim propertyBlock =
                 S.PropertyBlock(
                     S.PropertyStatement(actualName).

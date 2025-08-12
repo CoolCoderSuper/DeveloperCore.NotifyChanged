@@ -82,13 +82,15 @@ End Namespace
 Public MustInherit Class BindableObject
     Implements INotifyPropertyChanged, INotifyPropertyChanging
 
-    Public Sub RaiseAndSetIfChanged(Of T)(ByRef field As T, value As T, <CallerMemberName> Optional propertyName As String = "")
+    Public Function RaiseAndSetIfChanged(Of T)(ByRef field As T, value As T, <CallerMemberName> Optional propertyName As String = "") As Boolean
         If Not EqualityComparer(Of T).Default.Equals(field, value) Then
             RaiseNotifyPropertyChanging(propertyName)
             field = value
             RaiseNotifyPropertyChanged(propertyName)
+            Return True
         End If
-    End Sub
+        Return False
+    End Function
 
     Public Sub RaiseNotifyPropertyChanging(propertyName As String)
         RaiseEvent PropertyChanging(Me, New PropertyChangingEventArgs(propertyName))
