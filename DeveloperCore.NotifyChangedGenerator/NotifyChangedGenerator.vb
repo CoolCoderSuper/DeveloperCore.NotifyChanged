@@ -46,6 +46,7 @@ Public Class NotifyChangedGenerator
         Dim conditionalMethods = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitConditionAttribute").Select(Function(x) CStr(x.ConstructorArguments.First().Value)).ToArray()
         Dim bindings = context.TargetSymbol.GetAttributes().Where(Function(x) x.AttributeClass.Name = "EmitBindAttribute").ToArray()
         Dim hasBinding = bindings.Any()
+        Dim isPrivateSet = context.TargetSymbol.GetAttributes().Any(Function(x) x.AttributeClass.Name = "EmitPrivateSetAttribute")
         Dim propertyGetter =
                 S.GetAccessorBlock(S.GetAccessorStatement()).
                     AddStatements(S.ReturnStatement(S.ParseName(context.TargetSymbol.Name)))
@@ -116,13 +117,17 @@ Public Class NotifyChangedGenerator
                     conditionalExpr
                 )
             ).AddStatements(methodsToCallInvocations.ToArray())
+        Dim setAccessor = S.SetAccessorStatement()
+        If isPrivateSet Then
+            setAccessor = setAccessor.AddModifiers(S.Token(SyntaxKind.PrivateKeyword))
+        End If
         Dim propertySetter = 
-                S.SetAccessorBlock(S.SetAccessorStatement()).
+                S.SetAccessorBlock(setAccessor).
                     AddStatements(valueSetStatement)
         Dim propertyBlock =
                 S.PropertyBlock(
                     S.PropertyStatement(actualName).
-                        WithModifiers(S.TokenList(S.Token(SyntaxKind.PublicKeyword))).
+                        AddModifiers(S.Token(SyntaxKind.PublicKeyword)).
                         WithAsClause(S.SimpleAsClause(S.ParseTypeName(fieldSymbol.Type.ToString()))),
                     S.List(Of AccessorBlockSyntax)({propertyGetter, propertySetter})
                 )

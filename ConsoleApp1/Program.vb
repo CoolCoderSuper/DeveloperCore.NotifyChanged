@@ -29,7 +29,7 @@ Namespace Other.Nice
         <EmitCondition(NameOf(Cond2))>
         <EmitCondition(NameOf(Cond3))> Private _age As Integer
 
-        <NotifyChanged> Private m_strAddress As String
+        <NotifyChanged> <EmitPrivateSet> Private m_strAddress As String
 
         <NotifyChanged> Private _items As DataTable
 
